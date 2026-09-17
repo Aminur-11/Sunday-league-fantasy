@@ -1,0 +1,352 @@
+// Private 7-a-side Fantasy Football — Prisma schema
+// See CLAUDE.md for architecture notes and business-rule rationale.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users / Auth
+// ---------------------------------------------------------------------------
+
+enum Role {
+  MANAGER
+  ADMIN
+}
+
+model User {
+  id                        String   @id @default(cuid())
+  username                  String   @unique
+  passwordHash              String
+  role                      Role     @default(MANAGER)
+  active                    Boolean  @default(true)
+  temporaryPasswordRequired Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  sessions    Session[]
+  fantasyTeam FantasyTeam?
+  auditLogs   AuditLog[]
+
+  @@index([username])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Real-life players (the 7-a-side footballers, distinct from managers)
+// ---------------------------------------------------------------------------
+
+enum Position {
+  DEF
+  MID
+  FWD
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String
+  position  Position
+  price     Decimal  @db.Decimal(6, 2)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  matchStats         PlayerMatchStat[]
+  squadSlots         FantasyGameweekSquadPlayer[]
+  transfersOut       Transfer[]                   @relation("TransferOutPlayer")
+  transfersIn        Transfer[]                   @relation("TransferInPlayer")
+  fantasyPoints      FantasyPlayerPoints[]
+  fantasyTeamPlayers FantasyTeamPlayer[]
+
+  @@index([position])
+  @@index([active])
+}
+
+// ---------------------------------------------------------------------------
+// Fantasy teams (owned 1:1 by a manager/user)
+// ---------------------------------------------------------------------------
+
+model FantasyTeam {
+  id        String   @id @default(cuid())
+  managerId String   @unique
+  manager   User     @relation(fields: [managerId], references: [id], onDelete: Cascade)
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Current (live, editable while OPEN) squad — the "working" selection.
+  currentPlayers FantasyTeamPlayer[]
+  gameweekSquads FantasyGameweekSquad[]
+  transfers      Transfer[]
+  gameweekPoints FantasyTeamGameweekPoints[]
+
+  @@index([managerId])
+}
+
+// The manager's current/working squad — mutated freely while the active
+// gameweek is OPEN. This is a source-of-truth table but is NOT used to
+// calculate historical points; FantasyGameweekSquad snapshots are used
+// for that instead (see CLAUDE.md).
+model FantasyTeamPlayer {
+  id            String      @id @default(cuid())
+  fantasyTeamId String
+  fantasyTeam   FantasyTeam @relation(fields: [fantasyTeamId], references: [id], onDelete: Cascade)
+  playerId      String
+  player        Player      @relation(fields: [playerId], references: [id])
+  isCaptain     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@unique([fantasyTeamId, playerId])
+  @@index([fantasyTeamId])
+}
+
+// ---------------------------------------------------------------------------
+// Scoring rules — immutable versioned snapshots
+// ---------------------------------------------------------------------------
+
+model ScoringRuleVersion {
+  id        String   @id @default(cuid())
+  label     String
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Per-position rules, stored as rows so future positions/rules extend cleanly.
+  positionRules PositionScoringRule[]
+
+  winPoints         Int @default(3)
+  drawPoints        Int @default(1)
+  lossPoints        Int @default(0)
+  captainMultiplier Int @default(2)
+
+  gameweeks Gameweek[]
+
+  @@index([isActive])
+}
+
+model PositionScoringRule {
+  id                String             @id @default(cuid())
+  versionId         String
+  version           ScoringRuleVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  position          Position
+  appearancePoints  Int                @default(2)
+  goalPoints        Int                @default(4)
+  assistPoints      Int                @default(3)
+  motmPoints        Int                @default(5)
+  concededPenalty   Int                @default(1)
+  concededThreshold Int                @default(5)
+
+  @@unique([versionId, position])
+}
+
+// ---------------------------------------------------------------------------
+// League-wide configuration (singleton row)
+// ---------------------------------------------------------------------------
+
+model LeagueSettings {
+  id        String   @id @default("singleton")
+  budget    Decimal  @default(100.00) @db.Decimal(6, 2)
+  updatedAt DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Gameweeks
+// ---------------------------------------------------------------------------
+
+enum GameweekStatus {
+  OPEN
+  LOCKED
+  COMPLETE
+}
+
+model Gameweek {
+  id                   String              @id @default(cuid())
+  number               Int                 @unique
+  startAt              DateTime
+  deadline             DateTime
+  status               GameweekStatus      @default(OPEN)
+  scoringRuleVersionId String?
+  scoringRuleVersion   ScoringRuleVersion? @relation(fields: [scoringRuleVersionId], references: [id])
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  matches    Match[]
+  squads     FantasyGameweekSquad[]
+  transfers  Transfer[]
+  teamPoints FantasyTeamGameweekPoints[]
+
+  @@index([status])
+}
+
+// Snapshot of a manager's 7 players + captain for a specific gameweek.
+// This is the authoritative source for historical scoring — never derive
+// historical points from the manager's *current* live roster.
+model FantasyGameweekSquad {
+  id            String      @id @default(cuid())
+  fantasyTeamId String
+  fantasyTeam   FantasyTeam @relation(fields: [fantasyTeamId], references: [id], onDelete: Cascade)
+  gameweekId    String
+  gameweek      Gameweek    @relation(fields: [gameweekId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  players FantasyGameweekSquadPlayer[]
+
+  @@unique([fantasyTeamId, gameweekId])
+  @@index([gameweekId])
+}
+
+model FantasyGameweekSquadPlayer {
+  id        String               @id @default(cuid())
+  squadId   String
+  squad     FantasyGameweekSquad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  playerId  String
+  player    Player               @relation(fields: [playerId], references: [id])
+  isCaptain Boolean              @default(false)
+
+  // Historical snapshot fields — frozen at the moment the squad was locked
+  // in for the gameweek, so later admin edits to Player never rewrite history.
+  positionAtTime Position
+  priceAtTime    Decimal  @db.Decimal(6, 2)
+
+  @@unique([squadId, playerId])
+  @@index([playerId])
+}
+
+// ---------------------------------------------------------------------------
+// Transfers
+// ---------------------------------------------------------------------------
+
+model Transfer {
+  id            String      @id @default(cuid())
+  fantasyTeamId String
+  fantasyTeam   FantasyTeam @relation(fields: [fantasyTeamId], references: [id], onDelete: Cascade)
+  gameweekId    String
+  gameweek      Gameweek    @relation(fields: [gameweekId], references: [id])
+  playerOutId   String
+  playerOut     Player      @relation("TransferOutPlayer", fields: [playerOutId], references: [id])
+  playerInId    String
+  playerIn      Player      @relation("TransferInPlayer", fields: [playerInId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@index([fantasyTeamId])
+  @@index([gameweekId])
+}
+
+// ---------------------------------------------------------------------------
+// Real-life matches & stats (source of truth for scoring)
+// ---------------------------------------------------------------------------
+
+model Match {
+  id         String   @id @default(cuid())
+  gameweekId String
+  gameweek   Gameweek @relation(fields: [gameweekId], references: [id], onDelete: Cascade)
+  teamAName  String
+  teamBName  String
+  scoreA     Int
+  scoreB     Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  playerStats PlayerMatchStat[]
+
+  @@index([gameweekId])
+}
+
+enum TeamSide {
+  A
+  B
+}
+
+model PlayerMatchStat {
+  id       String   @id @default(cuid())
+  matchId  String
+  match    Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player   @relation(fields: [playerId], references: [id])
+  teamSide TeamSide
+
+  appearance Boolean @default(true)
+  goals      Int     @default(0)
+  assists    Int     @default(0)
+  motm       Boolean @default(false)
+
+  // Frozen at the moment stats are recorded, taken from Player.position at
+  // that instant. Guarantees a later position change on Player never rewrites
+  // this match's scoring (see CLAUDE.md "Historical position/price").
+  positionAtTime Position
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fantasyPoints FantasyPlayerPoints?
+
+  @@unique([matchId, playerId])
+  @@index([playerId])
+}
+
+// ---------------------------------------------------------------------------
+// Derived data — recalculable from source data. Never hand-edited.
+// ---------------------------------------------------------------------------
+
+// Calculated points for one player's appearance in one match (pre-captain).
+model FantasyPlayerPoints {
+  id                String          @id @default(cuid())
+  playerMatchStatId String          @unique
+  playerMatchStat   PlayerMatchStat @relation(fields: [playerMatchStatId], references: [id], onDelete: Cascade)
+  gameweekId        String
+  playerId          String
+  basePoints        Int
+  breakdown         Json
+  calculatedAt      DateTime        @updatedAt
+  player            Player          @relation(fields: [playerId], references: [id])
+
+  @@index([gameweekId])
+  @@index([playerId])
+}
+
+// Calculated total for one manager's fantasy team in one gameweek.
+model FantasyTeamGameweekPoints {
+  id            String      @id @default(cuid())
+  fantasyTeamId String
+  fantasyTeam   FantasyTeam @relation(fields: [fantasyTeamId], references: [id], onDelete: Cascade)
+  gameweekId    String
+  gameweek      Gameweek    @relation(fields: [gameweekId], references: [id], onDelete: Cascade)
+  points        Int
+  breakdown     Json
+  calculatedAt  DateTime    @updatedAt
+
+  @@unique([fantasyTeamId, gameweekId])
+  @@index([gameweekId])
+}
+
+// ---------------------------------------------------------------------------
+// Audit log
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+}
