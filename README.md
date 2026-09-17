@@ -1,4 +1,4 @@
-# Sunday League Fantasy
+# TNF Fantasy Football
 
 A private fantasy football app for a group of friends who play weekly 7-a-side football. Fantasy managers pick 7 real players from the group and score points based on how those players actually perform each week.
 

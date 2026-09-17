@@ -3,7 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "Sunday League Fantasy",
+  title: "TNF Fantasy Football",
   description: "Private fantasy football for our weekly 7-a-side group.",
 };
 

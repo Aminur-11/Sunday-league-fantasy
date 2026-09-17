@@ -127,7 +127,7 @@ export default function TeamBuilder({
               onChange={(e) => setTeamName(e.target.value)}
               maxLength={40}
               disabled={!editable}
-              placeholder="e.g. Sunday Strikers"
+              placeholder="e.g. Thursday Titans"
             />
           </Field>
         </Card>

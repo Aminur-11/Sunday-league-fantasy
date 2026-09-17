@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# Sunday League Fantasy — architecture notes
+# TNF Fantasy Football — architecture notes
 
 Private fantasy football app for a group of friends' weekly 7-a-side matches. Read this before making changes — it captures decisions that aren't obvious from the code alone.
 

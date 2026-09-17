@@ -13,8 +13,8 @@ export default async function Navbar() {
           className="flex items-center gap-2 font-bold tracking-tight"
         >
           <span className="text-xl">⚽</span>
-          <span className="hidden sm:inline">Sunday League Fantasy</span>
-          <span className="sm:hidden">SLF</span>
+          <span className="hidden sm:inline">TNF Fantasy Football</span>
+          <span className="sm:hidden">TNF</span>
         </Link>
 
         <NavMenu user={user ? { username: user.username, role: user.role } : null} />
