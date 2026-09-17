@@ -37,7 +37,7 @@ createdb fantasy7_test   # used only by the integration/e2e test suites
 cp .env.example .env
 ```
 
-Edit `.env` and set `DATABASE_URL` to point at your Postgres instance.
+Edit `.env` and set `DATABASE_URL` (and `DIRECT_URL`) to point at your Postgres instance. For a plain local Postgres these are identical; for a pooled host like Supabase, `DATABASE_URL` is the pooled connection the app uses at runtime and `DIRECT_URL` is the direct connection Prisma Migrate needs — see the comments in `.env.example`.
 
 ### 4. Run migrations and seed data
 
@@ -95,12 +95,12 @@ npm run db:studio   # Prisma Studio (browse the database)
 
 This app is a standard Next.js app and deploys to Vercel (or any Node host) with a Postgres database (e.g. Supabase, Neon, RDS):
 
-1. Provision a Postgres database and set `DATABASE_URL` as an environment variable on your host.
-2. Run `npx prisma migrate deploy` against that database (as part of your build/deploy step).
+1. Provision a Postgres database and set `DATABASE_URL` and `DIRECT_URL` as environment variables on your host (see `.env.example` — on a pooled host like Supabase these are two different connection strings; on a plain Postgres host they're identical).
+2. Run `npx prisma migrate deploy` against that database (as a one-off, from your own machine or a deploy step — not on every build).
 3. Run `npm run db:seed` once to create the initial admin account, scoring rules, and league settings — **note the printed admin temporary password**, since it's only shown once.
 4. Deploy the app (`npm run build && npm run start`, or connect the repo to Vercel).
 
-Never commit real secrets. `.env` is git-ignored; use your hosting platform's environment variable settings for `DATABASE_URL` in production.
+Never commit real secrets. `.env` is git-ignored; use your hosting platform's environment variable settings for `DATABASE_URL`/`DIRECT_URL` in production.
 
 ## Project structure
 
