@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentGameweek } from "@/lib/gameweek";
 import { Card, Badge } from "@/components/ui";
 import GameweekHistory from "@/components/GameweekHistory";
+import PitchView from "@/components/PitchView";
 
 interface PlayerBreakdownEntry {
   playerId: string;
@@ -90,6 +91,8 @@ export default async function TeamDetailPage({
           </div>
         )}
       </Card>
+
+      {displayPlayers.length > 0 && <PitchView players={displayPlayers} />}
 
       <Card>
         <h2 className="mb-3 text-lg font-semibold">Squad</h2>
