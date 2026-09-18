@@ -52,19 +52,23 @@ export default async function TeamDetailPage({
 
   const totalPoints = team.gameweekPoints.reduce((sum, gp) => sum + gp.points, 0);
 
-  const displayPlayers = squad
-    ? squad.players.map((sp) => ({
-        id: sp.playerId,
-        name: sp.player.name,
-        position: sp.positionAtTime,
-        isCaptain: sp.isCaptain,
-      }))
-    : team.currentPlayers.map((sp) => ({
-        id: sp.playerId,
-        name: sp.player.name,
-        position: sp.player.position,
-        isCaptain: sp.isCaptain,
-      }));
+  const POSITION_ORDER = { DEF: 0, MID: 1, FWD: 2 } as const;
+
+  const displayPlayers = (
+    squad
+      ? squad.players.map((sp) => ({
+          id: sp.playerId,
+          name: sp.player.name,
+          position: sp.positionAtTime,
+          isCaptain: sp.isCaptain,
+        }))
+      : team.currentPlayers.map((sp) => ({
+          id: sp.playerId,
+          name: sp.player.name,
+          position: sp.player.position,
+          isCaptain: sp.isCaptain,
+        }))
+  ).sort((a, b) => POSITION_ORDER[a.position] - POSITION_ORDER[b.position]);
 
   return (
     <div className="flex flex-col gap-4">
