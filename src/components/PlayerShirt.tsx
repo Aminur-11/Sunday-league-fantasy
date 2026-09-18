@@ -13,14 +13,14 @@ export default function PlayerShirt({
         aria-hidden="true"
       >
         <path
-          d="M16 8 L6 18 L14 26 L14 58 L50 58 L50 26 L58 18 L48 8 L40 13 Q32 18 24 13 Z"
+          d="M20 8 L6 22 L16 28 L16 58 L48 58 L48 28 L58 22 L44 8 Q32 14 20 8 Z"
           fill="#ffffff"
           stroke="#94a3b8"
           strokeWidth="1.5"
           strokeLinejoin="round"
         />
         <path
-          d="M24 13 Q32 18 40 13"
+          d="M24 9 Q32 15 40 9"
           fill="none"
           stroke="#cbd5e1"
           strokeWidth="1.5"
