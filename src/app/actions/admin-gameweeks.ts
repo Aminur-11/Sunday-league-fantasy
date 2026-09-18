@@ -190,3 +190,41 @@ export async function updateGameweekDatesAction(
   revalidatePath("/dashboard");
   return { success: true };
 }
+
+export async function deleteGameweekAction(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  await requireAdmin();
+
+  const gameweekId = String(formData.get("gameweekId") ?? "");
+
+  const gameweek = await prisma.gameweek.findUnique({
+    where: { id: gameweekId },
+    include: { _count: { select: { matches: true } } },
+  });
+  if (!gameweek) return { error: "Gameweek not found" };
+
+  // Only gameweeks with no recorded matches can be deleted — once a match
+  // exists, real scoring history (stats, points, standings) hangs off it,
+  // and deleting the gameweek would silently rewrite that history. Delete
+  // the match(es) first via Record Stats if this gameweek was a mistake.
+  if (gameweek._count.matches > 0) {
+    return {
+      error:
+        "This gameweek has recorded matches and can't be deleted. Remove its match(es) from Record Stats first.",
+    };
+  }
+
+  await prisma.$transaction([
+    // Transfer rows aren't cascade-deleted with their gameweek (unlike
+    // squads and team points), so they need clearing explicitly first.
+    prisma.transfer.deleteMany({ where: { gameweekId } }),
+    prisma.gameweek.delete({ where: { id: gameweekId } }),
+  ]);
+
+  revalidatePath("/admin/gameweeks");
+  revalidatePath("/dashboard");
+  revalidatePath("/league");
+  return { success: true };
+}

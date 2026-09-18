@@ -4,7 +4,10 @@ import CreateGameweekForm from "./CreateGameweekForm";
 import GameweekRow from "./GameweekRow";
 
 export default async function AdminGameweeksPage() {
-  const gameweeks = await prisma.gameweek.findMany({ orderBy: { number: "desc" } });
+  const gameweeks = await prisma.gameweek.findMany({
+    orderBy: { number: "desc" },
+    include: { _count: { select: { matches: true } } },
+  });
   const nextNumber = (gameweeks[0]?.number ?? 0) + 1;
 
   return (
@@ -24,6 +27,7 @@ export default async function AdminGameweeksPage() {
                 startAt: gw.startAt.toISOString(),
                 deadline: gw.deadline.toISOString(),
                 status: gw.status,
+                matchCount: gw._count.matches,
               }}
             />
           ))}

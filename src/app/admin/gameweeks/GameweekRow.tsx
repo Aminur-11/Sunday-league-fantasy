@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import {
   transitionGameweekAction,
   updateGameweekDatesAction,
+  deleteGameweekAction,
 } from "@/app/actions/admin-gameweeks";
 import type { ActionResult } from "@/app/actions/auth";
 import {
@@ -36,6 +37,7 @@ export interface GameweekRowData {
   startAt: string;
   deadline: string;
   status: GameweekStatus;
+  matchCount: number;
 }
 
 const initialState: ActionResult = {};
@@ -49,6 +51,7 @@ export default function GameweekRow({ gw }: { gw: GameweekRowData }) {
     updateGameweekDatesAction,
     initialState,
   );
+  const [deleteState, dispatchDelete] = useActionState(deleteGameweekAction, initialState);
   const [editingDates, setEditingDates] = useState(false);
   const [autoCreateNext, setAutoCreateNext] = useState(true);
   const [isPending, startTransition] = useTransition();
@@ -71,6 +74,15 @@ export default function GameweekRow({ gw }: { gw: GameweekRowData }) {
     }
     startTransition(() => {
       dispatchTransition(formData);
+    });
+  }
+
+  function fireDelete() {
+    if (!confirm(`Delete Gameweek ${gw.number}? This cannot be undone.`)) return;
+    const formData = new FormData();
+    formData.set("gameweekId", gw.id);
+    startTransition(() => {
+      dispatchDelete(formData);
     });
   }
 
@@ -148,6 +160,11 @@ export default function GameweekRow({ gw }: { gw: GameweekRowData }) {
           <SecondaryButton type="button" onClick={() => setEditingDates((v) => !v)}>
             {editingDates ? "Cancel" : "Edit dates"}
           </SecondaryButton>
+          {gw.matchCount === 0 && (
+            <DangerButton type="button" disabled={isPending} onClick={fireDelete}>
+              Delete
+            </DangerButton>
+          )}
         </div>
       </div>
 
@@ -155,6 +172,7 @@ export default function GameweekRow({ gw }: { gw: GameweekRowData }) {
       {transitionState.success && transitionState.message && (
         <SuccessText>{transitionState.message}</SuccessText>
       )}
+      <ErrorText>{deleteState.error}</ErrorText>
 
       {editingDates && (
         <form action={datesAction} className="mt-4 grid grid-cols-1 gap-3 border-t border-card-border pt-4 sm:grid-cols-3 sm:items-end">
