@@ -106,6 +106,11 @@ test.describe.serial("Core fantasy season journey", () => {
   test("6. admin locks the gameweek", async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto("/admin/gameweeks");
+    // Locking auto-creates next week's gameweek by default; this journey
+    // manually creates its own "next gameweek" later (step 18) to prove new
+    // scoring rules apply going forward, so opt out here to avoid the two
+    // colliding.
+    await gameweekCard(page, gwNumber).locator('input[type=checkbox]').uncheck();
     await gameweekCard(page, gwNumber).getByRole("button", { name: "Lock" }).click();
     await expect(gameweekCard(page, gwNumber).getByText("LOCKED")).toBeVisible();
   });

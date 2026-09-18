@@ -13,6 +13,7 @@ import {
   PrimaryButton,
   DangerButton,
   ErrorText,
+  SuccessText,
   Field,
   TextInput,
 } from "@/components/ui";
@@ -49,17 +50,25 @@ export default function GameweekRow({ gw }: { gw: GameweekRowData }) {
     initialState,
   );
   const [editingDates, setEditingDates] = useState(false);
+  const [autoCreateNext, setAutoCreateNext] = useState(true);
   const [isPending, startTransition] = useTransition();
 
   // Invoking the action directly (rather than submitting a <form>) avoids a
   // browser quirk: calling form.requestSubmit() from inside that same
   // form's own submit handler is silently blocked as a re-entrant
   // submission, which is what made the confirm()-gated buttons below no-op.
-  function fireTransition(targetStatus: GameweekStatus, confirmMessage?: string) {
+  function fireTransition(
+    targetStatus: GameweekStatus,
+    confirmMessage?: string,
+    extra?: Record<string, string>,
+  ) {
     if (confirmMessage && !confirm(confirmMessage)) return;
     const formData = new FormData();
     formData.set("gameweekId", gw.id);
     formData.set("targetStatus", targetStatus);
+    if (extra) {
+      for (const [key, value] of Object.entries(extra)) formData.set(key, value);
+    }
     startTransition(() => {
       dispatchTransition(formData);
     });
@@ -78,13 +87,26 @@ export default function GameweekRow({ gw }: { gw: GameweekRowData }) {
         </div>
         <div className="flex flex-wrap gap-2">
           {gw.status === "OPEN" && (
-            <SecondaryButton
-              type="button"
-              disabled={isPending}
-              onClick={() => fireTransition("LOCKED")}
-            >
-              Lock
-            </SecondaryButton>
+            <div className="flex flex-col items-end gap-1">
+              <SecondaryButton
+                type="button"
+                disabled={isPending}
+                onClick={() =>
+                  fireTransition("LOCKED", undefined, { autoCreateNext: String(autoCreateNext) })
+                }
+              >
+                Lock
+              </SecondaryButton>
+              <label className="flex items-center gap-1.5 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  checked={autoCreateNext}
+                  onChange={(e) => setAutoCreateNext(e.target.checked)}
+                  className="h-3.5 w-3.5"
+                />
+                Auto-create Gameweek {gw.number + 1}
+              </label>
+            </div>
           )}
           {gw.status === "LOCKED" && (
             <>
@@ -130,6 +152,9 @@ export default function GameweekRow({ gw }: { gw: GameweekRowData }) {
       </div>
 
       <ErrorText>{transitionState.error}</ErrorText>
+      {transitionState.success && transitionState.message && (
+        <SuccessText>{transitionState.message}</SuccessText>
+      )}
 
       {editingDates && (
         <form action={datesAction} className="mt-4 grid grid-cols-1 gap-3 border-t border-card-border pt-4 sm:grid-cols-3 sm:items-end">

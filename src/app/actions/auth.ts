@@ -14,6 +14,7 @@ import { signUpSchema, loginSchema, passwordSchema } from "@/lib/validation";
 export interface ActionResult {
   error?: string;
   success?: boolean;
+  message?: string;
 }
 
 export async function signUpAction(

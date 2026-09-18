@@ -105,7 +105,9 @@ export async function transitionGameweekAction(
     }
   }
 
-  if (targetStatus === "LOCKED" && gameweek.status === "OPEN") {
+  const isLockingFromOpen = targetStatus === "LOCKED" && gameweek.status === "OPEN";
+
+  if (isLockingFromOpen) {
     await autoSnapshotMissingSquads(gameweek.id);
   }
 
@@ -118,11 +120,36 @@ export async function transitionGameweekAction(
     await recalculateGameweekTeamPoints(gameweek.id);
   }
 
+  // Auto-create next week's gameweek as soon as this one is locked, so
+  // managers always have the full week to build their team rather than
+  // waiting on the admin to remember to click "Create". Defaults on;
+  // the admin can uncheck it at lock time (e.g. a bye week) or simply
+  // pre-create the next gameweek manually beforehand — either way this
+  // step is skipped rather than overriding what's already there.
+  let message: string | undefined;
+  if (isLockingFromOpen && formData.get("autoCreateNext") !== "false") {
+    const nextNumber = gameweek.number + 1;
+    const alreadyExists = await prisma.gameweek.findUnique({ where: { number: nextNumber } });
+    if (!alreadyExists) {
+      const activeVersion = await getActiveScoringRuleVersion();
+      await prisma.gameweek.create({
+        data: {
+          number: nextNumber,
+          startAt: gameweek.deadline,
+          deadline: new Date(gameweek.deadline.getTime() + 7 * 24 * 60 * 60 * 1000),
+          status: "OPEN",
+          scoringRuleVersionId: activeVersion.id,
+        },
+      });
+      message = `Next gameweek (#${nextNumber}) was auto-created — check its dates below.`;
+    }
+  }
+
   revalidatePath("/admin/gameweeks");
   revalidatePath("/dashboard");
   revalidatePath("/league");
   revalidatePath("/admin/record-stats");
-  return { success: true };
+  return { success: true, message };
 }
 
 const updateDatesSchema = z.object({
