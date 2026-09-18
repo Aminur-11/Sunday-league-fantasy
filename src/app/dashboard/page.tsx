@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentGameweek } from "@/lib/gameweek";
 import { Card, Badge, PrimaryButton, EmptyState } from "@/components/ui";
 import Countdown from "@/components/Countdown";
+import GameweekHistory from "@/components/GameweekHistory";
 
 const STATUS_TONE = {
   OPEN: "default",
@@ -20,7 +21,10 @@ export default async function DashboardPage() {
       where: { managerId: user.id },
       include: {
         currentPlayers: { include: { player: true } },
-        gameweekPoints: true,
+        gameweekPoints: {
+          include: { gameweek: true },
+          orderBy: { gameweek: { number: "desc" } },
+        },
       },
     }),
   ]);
@@ -199,6 +203,20 @@ export default async function DashboardPage() {
               })}
             </tbody>
           </table>
+        </Card>
+      )}
+
+      {fantasyTeam && fantasyTeam.gameweekPoints.length > 0 && (
+        <Card>
+          <h2 className="mb-3 text-lg font-semibold">Gameweek History</h2>
+          <GameweekHistory
+            entries={fantasyTeam.gameweekPoints.map((gp) => ({
+              gameweekId: gp.gameweekId,
+              number: gp.gameweek.number,
+              status: gp.gameweek.status,
+              points: gp.points,
+            }))}
+          />
         </Card>
       )}
 

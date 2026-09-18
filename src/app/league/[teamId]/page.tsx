@@ -4,6 +4,7 @@ import { requirePageUser } from "@/lib/guards";
 import { prisma } from "@/lib/prisma";
 import { getCurrentGameweek } from "@/lib/gameweek";
 import { Card, Badge } from "@/components/ui";
+import GameweekHistory from "@/components/GameweekHistory";
 
 interface PlayerBreakdownEntry {
   playerId: string;
@@ -26,7 +27,10 @@ export default async function TeamDetailPage({
     include: {
       manager: { select: { username: true } },
       currentPlayers: { include: { player: true } },
-      gameweekPoints: true,
+      gameweekPoints: {
+        include: { gameweek: true },
+        orderBy: { gameweek: { number: "desc" } },
+      },
     },
   });
   if (!team) notFound();
@@ -119,6 +123,20 @@ export default async function TeamDetailPage({
           </div>
         )}
       </Card>
+
+      {team.gameweekPoints.length > 0 && (
+        <Card>
+          <h2 className="mb-3 text-lg font-semibold">Gameweek History</h2>
+          <GameweekHistory
+            entries={team.gameweekPoints.map((gp) => ({
+              gameweekId: gp.gameweekId,
+              number: gp.gameweek.number,
+              status: gp.gameweek.status,
+              points: gp.points,
+            }))}
+          />
+        </Card>
+      )}
     </div>
   );
 }
