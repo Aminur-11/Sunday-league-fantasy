@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getBudget } from "@/lib/league-settings";
 import { Card } from "@/components/ui";
+import BudgetForm from "./BudgetForm";
 
 export default async function AdminDashboardPage() {
-  const [playerCount, userCount, gameweekCount, currentGameweek] = await Promise.all([
+  const [playerCount, userCount, gameweekCount, currentGameweek, budget] = await Promise.all([
     prisma.player.count({ where: { active: true } }),
     prisma.user.count(),
     prisma.gameweek.count(),
     prisma.gameweek.findFirst({ where: { status: "OPEN" }, orderBy: { number: "asc" } }),
+    getBudget(),
   ]);
 
   return (
@@ -48,6 +51,11 @@ export default async function AdminDashboardPage() {
             Record match stats →
           </Link>
         </p>
+      </Card>
+
+      <Card className="sm:col-span-3">
+        <h2 className="mb-2 text-lg font-semibold">League Settings</h2>
+        <BudgetForm currentBudget={Number(budget)} />
       </Card>
     </div>
   );
