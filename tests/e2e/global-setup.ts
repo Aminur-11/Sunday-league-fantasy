@@ -79,9 +79,9 @@ export default async function globalSetup() {
         captainMultiplier: 2,
         positionRules: {
           create: [
-            { position: "DEF", appearancePoints: 2, goalPoints: 5, assistPoints: 3, motmPoints: 5, concededPenalty: 1, concededThreshold: 5 },
-            { position: "MID", appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededPenalty: 1, concededThreshold: 5 },
-            { position: "FWD", appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededPenalty: 1, concededThreshold: 5 },
+            { position: "DEF", appearancePoints: 2, goalPoints: 5, assistPoints: 3, motmPoints: 5, concededBonusPoints: 5, concededBonusThreshold: 5 },
+            { position: "MID", appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededBonusPoints: 5, concededBonusThreshold: 5 },
+            { position: "FWD", appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededBonusPoints: 5, concededBonusThreshold: 5 },
           ],
         },
       },

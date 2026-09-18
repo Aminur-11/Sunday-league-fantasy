@@ -11,8 +11,8 @@ export interface PositionRuleValues {
   goalPoints: number;
   assistPoints: number;
   motmPoints: number;
-  concededPenalty: number;
-  concededThreshold: number;
+  concededBonusPoints: number;
+  concededBonusThreshold: number;
 }
 
 const initialState: ActionResult = {};
@@ -100,22 +100,25 @@ export default function GameRulesForm({
                 required
               />
             </Field>
-            <Field label="Conceded penalty" htmlFor={`${position}_concededPenalty`}>
+            <Field label="Bonus points" htmlFor={`${position}_concededBonusPoints`}>
               <TextInput
-                id={`${position}_concededPenalty`}
-                name={`${position}_concededPenalty`}
+                id={`${position}_concededBonusPoints`}
+                name={`${position}_concededBonusPoints`}
                 type="number"
-                defaultValue={positionRules[position].concededPenalty}
+                defaultValue={positionRules[position].concededBonusPoints}
                 required
               />
             </Field>
-            <Field label="Per every N conceded" htmlFor={`${position}_concededThreshold`}>
+            <Field
+              label="If goals conceded is under"
+              htmlFor={`${position}_concededBonusThreshold`}
+            >
               <TextInput
-                id={`${position}_concededThreshold`}
-                name={`${position}_concededThreshold`}
+                id={`${position}_concededBonusThreshold`}
+                name={`${position}_concededBonusThreshold`}
                 type="number"
                 min={1}
-                defaultValue={positionRules[position].concededThreshold}
+                defaultValue={positionRules[position].concededBonusThreshold}
                 required
               />
             </Field>

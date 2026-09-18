@@ -16,8 +16,8 @@ export function toScoringRules(version: ScoringRuleVersionWithRules): ScoringRul
       goalPoints: rule.goalPoints,
       assistPoints: rule.assistPoints,
       motmPoints: rule.motmPoints,
-      concededPenalty: rule.concededPenalty,
-      concededThreshold: rule.concededThreshold,
+      concededBonusPoints: rule.concededBonusPoints,
+      concededBonusThreshold: rule.concededBonusThreshold,
     };
   }
   return {
@@ -52,8 +52,8 @@ export async function getActiveScoringRuleVersion(): Promise<ScoringRuleVersionW
           goalPoints: position === "DEF" ? 5 : 4,
           assistPoints: 3,
           motmPoints: 5,
-          concededPenalty: 1,
-          concededThreshold: 5,
+          concededBonusPoints: 5,
+          concededBonusThreshold: 5,
         })),
       },
     },
@@ -73,8 +73,8 @@ export interface GameRulesInput {
       goalPoints: number;
       assistPoints: number;
       motmPoints: number;
-      concededPenalty: number;
-      concededThreshold: number;
+      concededBonusPoints: number;
+      concededBonusThreshold: number;
     }
   >;
 }

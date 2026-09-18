@@ -12,8 +12,8 @@ export default async function AdminGameRulesPage() {
       goalPoints: r.goalPoints,
       assistPoints: r.assistPoints,
       motmPoints: r.motmPoints,
-      concededPenalty: r.concededPenalty,
-      concededThreshold: r.concededThreshold,
+      concededBonusPoints: r.concededBonusPoints,
+      concededBonusThreshold: r.concededBonusThreshold,
     };
   }
 

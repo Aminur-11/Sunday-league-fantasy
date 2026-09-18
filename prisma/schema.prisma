@@ -153,8 +153,9 @@ model PositionScoringRule {
   goalPoints        Int                @default(4)
   assistPoints      Int                @default(3)
   motmPoints        Int                @default(5)
-  concededPenalty   Int                @default(1)
-  concededThreshold Int                @default(5)
+  // Bonus points awarded when the team concedes fewer than concededBonusThreshold goals.
+  concededBonusPoints    Int @default(5)
+  concededBonusThreshold Int @default(5)
 
   @@unique([versionId, position])
 }

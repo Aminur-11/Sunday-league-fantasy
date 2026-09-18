@@ -16,8 +16,9 @@ export interface PositionRule {
   goalPoints: number;
   assistPoints: number;
   motmPoints: number;
-  concededPenalty: number;
-  concededThreshold: number;
+  // Bonus points awarded when the team concedes fewer than concededBonusThreshold goals.
+  concededBonusPoints: number;
+  concededBonusThreshold: number;
 }
 
 export interface ScoringRules {
@@ -105,17 +106,13 @@ export function calculatePlayerPoints(
         ? rules.drawPoints
         : rules.lossPoints;
 
-  const concededUnits = Math.floor(
-    input.goalsConceded / rule.concededThreshold,
-  );
-
   const breakdown: ScoringBreakdown = {
     appearance: rule.appearancePoints,
     goals: input.goals * rule.goalPoints,
     assists: input.assists * rule.assistPoints,
     motm: input.motm ? rule.motmPoints : 0,
-    // Avoid producing -0 when concededUnits is 0.
-    goalsConceded: concededUnits === 0 ? 0 : -concededUnits * rule.concededPenalty,
+    goalsConceded:
+      input.goalsConceded < rule.concededBonusThreshold ? rule.concededBonusPoints : 0,
     result: resultPoints,
   };
 

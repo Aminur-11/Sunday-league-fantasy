@@ -12,8 +12,8 @@ const positionFields = z.object({
   goalPoints: z.coerce.number().int(),
   assistPoints: z.coerce.number().int(),
   motmPoints: z.coerce.number().int(),
-  concededPenalty: z.coerce.number().int(),
-  concededThreshold: z.coerce.number().int().min(1, "Threshold must be at least 1"),
+  concededBonusPoints: z.coerce.number().int(),
+  concededBonusThreshold: z.coerce.number().int().min(1, "Threshold must be at least 1"),
 });
 
 const schema = z.object({
@@ -44,8 +44,8 @@ export async function updateGameRulesAction(
       goalPoints: formData.get(`${position}_goalPoints`),
       assistPoints: formData.get(`${position}_assistPoints`),
       motmPoints: formData.get(`${position}_motmPoints`),
-      concededPenalty: formData.get(`${position}_concededPenalty`),
-      concededThreshold: formData.get(`${position}_concededThreshold`),
+      concededBonusPoints: formData.get(`${position}_concededBonusPoints`),
+      concededBonusThreshold: formData.get(`${position}_concededBonusThreshold`),
     };
   }
 

@@ -16,8 +16,8 @@ const INITIAL_RULES: ScoringRules = {
       goalPoints: 5,
       assistPoints: 3,
       motmPoints: 5,
-      concededPenalty: 1,
-      concededThreshold: 5,
+      concededBonusPoints: 5,
+      concededBonusThreshold: 5,
     },
     MID: {
       position: "MID",
@@ -25,8 +25,8 @@ const INITIAL_RULES: ScoringRules = {
       goalPoints: 4,
       assistPoints: 3,
       motmPoints: 5,
-      concededPenalty: 1,
-      concededThreshold: 5,
+      concededBonusPoints: 5,
+      concededBonusThreshold: 5,
     },
     FWD: {
       position: "FWD",
@@ -34,8 +34,8 @@ const INITIAL_RULES: ScoringRules = {
       goalPoints: 4,
       assistPoints: 3,
       motmPoints: 5,
-      concededPenalty: 1,
-      concededThreshold: 5,
+      concededBonusPoints: 5,
+      concededBonusThreshold: 5,
     },
   },
   winPoints: 3,
@@ -149,17 +149,13 @@ describe("calculatePlayerPoints — result", () => {
   });
 });
 
-describe("calculatePlayerPoints — goals conceded", () => {
+describe("calculatePlayerPoints — goals conceded bonus", () => {
   const cases: [number, number][] = [
-    [0, 0],
-    [4, 0],
-    [5, -1],
-    [9, -1],
-    [10, -2],
-    [14, -2],
-    [15, -3],
-    [19, -3],
-    [24, -4],
+    [0, 5],
+    [4, 5],
+    [5, 0],
+    [6, 0],
+    [10, 0],
   ];
   it.each(cases)("%i conceded -> %i points", (conceded, expected) => {
     const r = calculatePlayerPoints(baseInput({ goalsConceded: conceded }), INITIAL_RULES);
@@ -173,10 +169,10 @@ describe("calculatePlayerPoints — captain multiplier", () => {
       baseInput({ position: "MID", goals: 2, assists: 1, motm: true, result: "WIN", isCaptain: true }),
       INITIAL_RULES,
     );
-    // appearance 2 + goals 8 + assists 3 + motm 5 + win 3 = 21
-    expect(r.basePoints).toBe(21);
+    // appearance 2 + goals 8 + assists 3 + motm 5 + conceded bonus 5 + win 3 = 26
+    expect(r.basePoints).toBe(26);
     expect(r.multiplier).toBe(2);
-    expect(r.finalPoints).toBe(42);
+    expect(r.finalPoints).toBe(52);
   });
 
   it("non-captain uses multiplier 1", () => {
@@ -184,14 +180,14 @@ describe("calculatePlayerPoints — captain multiplier", () => {
     expect(r.multiplier).toBe(1);
   });
 
-  it("captain with negative base points still doubles (can go more negative)", () => {
+  it("captain doubles the conceded bonus too", () => {
     const r = calculatePlayerPoints(
-      baseInput({ goalsConceded: 30, isCaptain: true, result: "LOSS" }),
+      baseInput({ goalsConceded: 0, isCaptain: true, result: "LOSS" }),
       INITIAL_RULES,
     );
-    // appearance 2 - 6 (30/5*1) = -4 base
-    expect(r.basePoints).toBe(-4);
-    expect(r.finalPoints).toBe(-8);
+    // appearance 2 + conceded bonus 5 = 7 base
+    expect(r.basePoints).toBe(7);
+    expect(r.finalPoints).toBe(14);
   });
 });
 
@@ -214,11 +210,11 @@ describe("calculatePlayerPoints — combined example from spec", () => {
       goals: 8,
       assists: 3,
       motm: 5,
-      goalsConceded: 0,
+      goalsConceded: 5,
       result: 3,
     });
-    expect(r.basePoints).toBe(21);
-    expect(r.finalPoints).toBe(42);
+    expect(r.basePoints).toBe(26);
+    expect(r.finalPoints).toBe(52);
   });
 });
 

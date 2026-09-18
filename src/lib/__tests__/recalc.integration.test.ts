@@ -117,8 +117,8 @@ describe("recalculateMatch — idempotent recalculation", () => {
     expect(secondPlayerPoints).toHaveLength(firstPlayerPoints.length);
     expect(secondPlayerPoints).toHaveLength(1);
 
-    // appearance 2 + goals(2*4=8) + assists 3 + motm 5 + win 3 = 21 base, captain x2 = 42
-    expect(first.points).toBe(42);
+    // appearance 2 + goals(2*4=8) + assists 3 + motm 5 + win 3 + conceded bonus(1<5)=5 = 26 base, captain x2 = 52
+    expect(first.points).toBe(52);
   });
 
   it("editing a match (delete + recreate stats) does not duplicate points", async () => {
@@ -183,13 +183,13 @@ describe("recalculateMatch — idempotent recalculation", () => {
 
     const points = await prisma.fantasyPlayerPoints.findMany({ where: { gameweekId: gw.id } });
     expect(points).toHaveLength(1); // old row was cascaded away with the deleted stat, not left stale
-    // appearance 2 + goals(2*4=8) + draw 1 = 11
-    expect(points[0].basePoints).toBe(11);
+    // appearance 2 + goals(2*4=8) + draw 1 + conceded bonus(1<5)=5 = 16
+    expect(points[0].basePoints).toBe(16);
 
     const teamPoints = await prisma.fantasyTeamGameweekPoints.findUniqueOrThrow({
       where: { fantasyTeamId_gameweekId: { fantasyTeamId: team.id, gameweekId: gw.id } },
     });
-    expect(teamPoints.points).toBe(11);
+    expect(teamPoints.points).toBe(16);
   });
 });
 
@@ -202,9 +202,9 @@ describe("scoring-rule versioning — historical stability", () => {
         lossPoints: 0,
         captainMultiplier: 2,
         positionRules: {
-          DEF: { appearancePoints: 2, goalPoints: 5, assistPoints: 3, motmPoints: 5, concededPenalty: 1, concededThreshold: 5 },
-          MID: { appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededPenalty: 1, concededThreshold: 5 },
-          FWD: { appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededPenalty: 1, concededThreshold: 5 },
+          DEF: { appearancePoints: 2, goalPoints: 5, assistPoints: 3, motmPoints: 5, concededBonusPoints: 1, concededBonusThreshold: 5 },
+          MID: { appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededBonusPoints: 1, concededBonusThreshold: 5 },
+          FWD: { appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededBonusPoints: 1, concededBonusThreshold: 5 },
         },
       },
       "Version A — DEF goal = 5",
@@ -235,8 +235,8 @@ describe("scoring-rule versioning — historical stability", () => {
     const gw1PointsBefore = await prisma.fantasyPlayerPoints.findFirst({
       where: { gameweekId: gw1.id, playerId: defender.id },
     });
-    // appearance 2 + goal(1*5=5) + win 3 = 10 under version A
-    expect(gw1PointsBefore?.basePoints).toBe(10);
+    // appearance 2 + goal(1*5=5) + win 3 + conceded bonus(0<5)=1 = 11 under version A
+    expect(gw1PointsBefore?.basePoints).toBe(11);
 
     // Admin changes the rules: DEF goal now worth 6.
     const versionB = await createNewScoringRuleVersion(
@@ -246,9 +246,9 @@ describe("scoring-rule versioning — historical stability", () => {
         lossPoints: 0,
         captainMultiplier: 2,
         positionRules: {
-          DEF: { appearancePoints: 2, goalPoints: 6, assistPoints: 3, motmPoints: 5, concededPenalty: 1, concededThreshold: 5 },
-          MID: { appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededPenalty: 1, concededThreshold: 5 },
-          FWD: { appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededPenalty: 1, concededThreshold: 5 },
+          DEF: { appearancePoints: 2, goalPoints: 6, assistPoints: 3, motmPoints: 5, concededBonusPoints: 1, concededBonusThreshold: 5 },
+          MID: { appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededBonusPoints: 1, concededBonusThreshold: 5 },
+          FWD: { appearancePoints: 2, goalPoints: 4, assistPoints: 3, motmPoints: 5, concededBonusPoints: 1, concededBonusThreshold: 5 },
         },
       },
       "Version B — DEF goal = 6",
@@ -276,8 +276,8 @@ describe("scoring-rule versioning — historical stability", () => {
     const gw2Points = await prisma.fantasyPlayerPoints.findFirst({
       where: { gameweekId: gw2.id, playerId: defender.id },
     });
-    // appearance 2 + goal(1*6=6) + win 3 = 11 under version B
-    expect(gw2Points?.basePoints).toBe(11);
+    // appearance 2 + goal(1*6=6) + win 3 + conceded bonus(0<5)=1 = 12 under version B
+    expect(gw2Points?.basePoints).toBe(12);
 
     // Recalculating GW1 again (e.g. as part of a batch job) must NOT pick up
     // version B's rules — it stays pinned to version A forever.
@@ -285,7 +285,7 @@ describe("scoring-rule versioning — historical stability", () => {
     const gw1PointsAfter = await prisma.fantasyPlayerPoints.findFirst({
       where: { gameweekId: gw1.id, playerId: defender.id },
     });
-    expect(gw1PointsAfter?.basePoints).toBe(10);
+    expect(gw1PointsAfter?.basePoints).toBe(11);
   });
 });
 
@@ -317,8 +317,8 @@ describe("player position changes — historical immunity", () => {
     const beforeChange = await prisma.fantasyPlayerPoints.findFirst({
       where: { gameweekId: gw.id, playerId: player.id },
     });
-    // MID goal = 4: appearance 2 + goal 4 + win 3 = 9
-    expect(beforeChange?.basePoints).toBe(9);
+    // MID goal = 4: appearance 2 + goal 4 + win 3 + conceded bonus(0<5)=1 = 10 (active version B's bonus)
+    expect(beforeChange?.basePoints).toBe(10);
 
     // Player is later reclassified as a forward.
     await prisma.player.update({ where: { id: player.id }, data: { position: "FWD" } });
@@ -329,6 +329,6 @@ describe("player position changes — historical immunity", () => {
     const afterChange = await prisma.fantasyPlayerPoints.findFirst({
       where: { gameweekId: gw.id, playerId: player.id },
     });
-    expect(afterChange?.basePoints).toBe(9);
+    expect(afterChange?.basePoints).toBe(10);
   });
 });

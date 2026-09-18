@@ -156,23 +156,23 @@ test.describe.serial("Core fantasy season journey", () => {
     await completeGameweek(page, gwNumber);
   });
 
-  test("captain (2x) FWD: 2 goals + MOTM + win => 36; teammate on losing side => 1; total 37", async ({
+  test("captain (2x) FWD: 2 goals + MOTM + win + conceded bonus => 46; teammate on losing side => 2; total 48", async ({
     page,
   }) => {
     await loginAsManager(page, managerUsername);
     await page.goto("/dashboard");
     // Check "Overall points" rather than the "current gameweek" heading:
     // this manager has only ever played the one gameweek, so overall points
-    // is a robust 37 regardless of which gameweek the dashboard's "most
+    // is a robust 48 regardless of which gameweek the dashboard's "most
     // relevant gameweek" heuristic happens to surface (e.g. a later, empty
     // gameweek created by another test run can otherwise outrank this one).
     const overallPointsValue = page.locator("text=Overall points").locator("..").locator("span.text-xl");
-    await expect(overallPointsValue).toHaveText("37");
+    await expect(overallPointsValue).toHaveText("48");
 
     await page.goto("/league");
     await expect(page.getByText(teamName)).toBeVisible();
     const row = page.locator("tr", { hasText: teamName });
-    await expect(row.locator("td").nth(3)).toHaveText("37"); // Total Points column
+    await expect(row.locator("td").nth(3)).toHaveText("48"); // Total Points column
   });
 
   test("16-17. changing scoring rules afterwards leaves the completed gameweek unchanged", async ({
@@ -189,11 +189,11 @@ test.describe.serial("Core fantasy season journey", () => {
     // The already-completed gameweek's stored points must be unaffected by
     // this rule change (they are pinned to the scoring-rule version that was
     // active when the gameweek was created — see scoring-rules integration
-    // tests for the data-layer proof). Confirm the UI-visible total is still 37.
+    // tests for the data-layer proof). Confirm the UI-visible total is still 48.
     await loginAsManager(page, managerUsername);
     await page.goto("/league");
     const row = page.locator("tr", { hasText: teamName });
-    await expect(row.locator("td").nth(3)).toHaveText("37");
+    await expect(row.locator("td").nth(3)).toHaveText("48");
   });
 
   test("18. a new gameweek picks up the new scoring rules", async ({ page }) => {
